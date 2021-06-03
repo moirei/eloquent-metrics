@@ -1,6 +1,8 @@
 # Value
 
-Value metrics retreive a signle value from a given period. As a [Period Metric](/metrics/period-metric.html), the sample period and comparison periods may be fine-tuned.
+Value metrics retrieve a signle value from a given period. As a [Period Metric](/metrics/period-metric.html), the sample period and comparison periods may be fine-tuned.
+
+Returns a [Value Result](/result-types/value.html).
 
 ```php
 use MOIREI\Metrics\Value;

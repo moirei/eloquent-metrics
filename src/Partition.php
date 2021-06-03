@@ -90,9 +90,14 @@ class Partition extends Metric
 
         $results = $query->select($group_by, DB::raw("{$function}({$wrapped_column}) as aggregate"))->groupBy($group_by)->get();
 
-        return $results->mapWithKeys(function ($result) use ($group_by) {
+        $results = $results->mapWithKeys(function ($result) use ($group_by) {
             return $this->formatResult($result, $group_by);
         })->all();
+
+        return PartitionResult::make([
+            'labels' => array_keys($results),
+            'dataset' => array_values($results),
+        ]);
     }
 
     /**

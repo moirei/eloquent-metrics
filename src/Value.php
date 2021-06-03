@@ -112,17 +112,19 @@ class Value extends PeriodMetric
             ]);
         }
 
-        return [
-            [
+        $results = [
+            'value' => [
                 'name' => $this->period_name,
-                'value' => $this->data
+                'data' => $this->data
             ],
-            ...array_map(function($comparison){
+            'comparisons' => array_map(function($comparison){
                 return [
                     'name' => $comparison['name'],
-                    'value' => $comparison['data'],
+                    'data' => $comparison['data'],
                 ];
             }, $this->comparison_values)
         ];
+
+        return ValueResult::make($results);
     }
 }

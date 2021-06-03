@@ -1,8 +1,9 @@
 # Partition
 
+A call to any of the operations returns a [Partition Result](/result-types/partition.html).
+
 ```php
 use MOIREI\Metrics\Partition;
-
 ...
 ```
 

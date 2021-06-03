@@ -479,20 +479,22 @@ class Trend extends PeriodMetric
 
         }, $this->comparisons);
 
-        return [
-            [
+        $results = [
+            'trend' => [
                 'name' => $this->period_name,
                 'labels' => array_keys($this->data),
-                'data' => array_values($this->data)
+                'dataset' => array_values($this->data)
             ],
-            ...array_map(function($comparison){
+            'comparisons' => array_map(function($comparison){
                 return [
                     'name' => $comparison['name'],
                     'labels' => array_keys($comparison['data']),
-                    'data' => array_values($comparison['data']),
+                    'dataset' => array_values($comparison['data']),
                 ];
             }, $this->comparison_values)
         ];
+
+        return TrendResult::make($results);
     }
 
     /**
