@@ -4,7 +4,7 @@
 
 **Result**
 
-| Name          | Type          | Description               |
+| Field         | Type          | Description               |
 | ------------- | ------------- | ------------------------- |
 | `trend`       | `TrendData`   | The trend data            |
 | `comparisons` | `TrendData[]` | The trend comparison data |
@@ -12,7 +12,7 @@
 
 **TrendData**
 
-| Name      | Type            | Description                         |
+| Field     | Type            | Description                         |
 | --------- | --------------- | ----------------------------------- |
 | `name`    | `string`        | The sample name for the metric      |
 | `labels`  | `string[]`      | The sample labels for the data sets |

@@ -4,7 +4,7 @@
 
 **Result**
 
-| Name          | Type            | Description               |
+| Field         | Type            | Description               |
 | ------------- | --------------- | ------------------------- |
 | `labels`      | `string[]`      | The partition labels      |
 | `dataset`     | `int[]|float[]` | The partition value data  |

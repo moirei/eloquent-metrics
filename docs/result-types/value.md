@@ -4,15 +4,15 @@
 
 **Result**
 
-| Name          | Type          | Description         |
+| Field         | Type          | Description         |
 | ------------- | ------------- | ------------------- |
-| `trend`       | `ValueData`   | The value data      |
+| `value`       | `ValueData`   | The value data      |
 | `comparisons` | `ValueData[]` | The comparison data |
 
 
 **ValueData**
 
-| Name   | Type        | Description                     |
+| Field  | Type        | Description                     |
 | ------ | ----------- | ------------------------------- |
 | `name` | `string`    | The sample name for the metric  |
 | `data` | `int|float` | The sample/aggregate data value |

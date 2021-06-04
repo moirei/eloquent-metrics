@@ -88,7 +88,7 @@ use Chartisan\PHP\Chartisan;
 use Illuminate\Http\Request;
 use App\Models\Ecommerce\Order;
 
-class OrderValue extends BaseChart
+class OrderSales extends BaseChart
 {
     public ?string $name = 'order-value';
 
@@ -131,7 +131,7 @@ const metrics = axios
       .get('/api/chart/order-value', {
         params: {
           period: [
-            moment().subtract(2, 'days'),
+            moment().subtract(2, 'days').toISOString(),
             moment().toISOString()
           ],
           comparisons: ['previous-week'],
