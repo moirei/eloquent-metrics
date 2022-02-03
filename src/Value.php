@@ -86,9 +86,9 @@ class Value extends PeriodMetric
      * @param  string  $function
      * @param  string|null  $column
      * @param  string|null  $date_column
-     * @return Chartisan
+     * @return ValueResult
      */
-    protected function aggregate($model, $function, $column = null, $date_column = null)
+    public function aggregate($model, $function, $column = null, $date_column = null)
     {
         $this->function = $function;
 
@@ -98,14 +98,14 @@ class Value extends PeriodMetric
         $date_column = $date_column ?? $query->getModel()->getCreatedAtColumn();
         $query = with(clone $query);
 
-        if(!$this->period){
+        if (!$this->period) {
             throw new LogicException('Intitialise period before creating metric.');
         }
 
         $this->data = round($query->whereBetween($date_column, $this->period)->{$function}($column), $this->precision);
 
         // comparisons
-        foreach($this->comparisons as $comparison){
+        foreach ($this->comparisons as $comparison) {
             array_push($this->comparison_values, [
                 'name' => $comparison['name'],
                 'data' => round($query->whereBetween($date_column, $comparison['period'])->{$function}($column), $this->precision)
@@ -117,7 +117,7 @@ class Value extends PeriodMetric
                 'name' => $this->period_name,
                 'data' => $this->data
             ],
-            'comparisons' => array_map(function($comparison){
+            'comparisons' => array_map(function ($comparison) {
                 return [
                     'name' => $comparison['name'],
                     'data' => $comparison['data'],

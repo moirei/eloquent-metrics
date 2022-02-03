@@ -79,9 +79,9 @@ class Partition extends Metric
      * @param  string  $function
      * @param  string  $column
      * @param  string  $group_by
-     * @return Chartisan
+     * @return PartitionResult
      */
-    protected function aggregate($model, $function, $column, $group_by)
+    public function aggregate($model, $function, $column, $group_by)
     {
         $query = $model instanceof Builder ? $model : (new $model)->newQuery();
         $column = $column ?? $query->getModel()->getQualifiedKeyName();

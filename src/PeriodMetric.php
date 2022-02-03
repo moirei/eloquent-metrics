@@ -48,22 +48,25 @@ abstract class PeriodMetric extends Metric
      * Set the period for the dataset.
      *
      * @param \Illuminate\Support\Carbon|string|int $start
-     * @param \Illuminate\Support\Carbon|null $end
+     * @param \Illuminate\Support\Carbon|string|null $end
      * @return PeriodMetric
      */
-    public function period(Carbon | string | int $start, Carbon $end = null): PeriodMetric
+    public function period($start, $end = null): PeriodMetric
     {
-        if(is_string($start)){
+        if (is_string($start)) {
             $start = $this->getKnownPeriod($start);
             $name = (string)$start;
-        }elseif(is_numeric($start)){
+        } elseif (is_numeric($start)) {
             $start = now($this->timezone)->subHours($start);
             $name = (string)$start;
         }
+        if (is_string($end)) {
+            $end = $this->getKnownPeriod($end);
+        }
 
-        $this->period = [$start, $end?? now($this->timezone)];
+        $this->period = [$start, $end ?? now($this->timezone)];
 
-        if(empty($name)){
+        if (empty($name)) {
             $name = $start->isoFormat('dddd D');
         }
 
@@ -79,16 +82,16 @@ abstract class PeriodMetric extends Metric
      * @param string|null $qualifier
      * @return PeriodMetric
      */
-    public function add(Carbon|string|float|int|array $comparison, string|null $qualifier = null): PeriodMetric
+    public function add($comparison, $qualifier = null): PeriodMetric
     {
-        if(!is_array($comparison)){
+        if (!is_array($comparison)) {
             return $this->comparison($comparison, $qualifier);
         }
 
-        foreach($comparison as $item){
-            if(is_string($item)){
+        foreach ($comparison as $item) {
+            if (is_string($item)) {
                 call_user_func_array([$this, "comparison"], explode(' ', $item));
-            }else{
+            } else {
                 $this->comparison($item);
             }
         }
@@ -105,54 +108,65 @@ abstract class PeriodMetric extends Metric
      * @param string|null $qualifier
      * @return PeriodMetric
      */
-    public function comparison(Carbon | string | float | int $comparison, string | null $qualifier = null): PeriodMetric
+    public function comparison($comparison, $qualifier = null): PeriodMetric
     {
-        if(!$this->period){
+        if (!$this->period) {
             throw new LogicException('Intitialise period before adding comparisons.');
         }
 
-        $amount = 1;
+        if ($comparison instanceof Carbon) {
+            $name = $comparison->calendar(null, Helpers::calendarFormats());
+            $seconds = $comparison->diffInSeconds(now($this->timezone), true);
+            $period = [
+                (clone $this->period[0])->subSeconds($seconds),
+                (clone $this->period[1])->subSeconds($seconds),
+            ];
+        } else {
+            $amount = 1;
+            if (is_numeric($comparison)) {
+                $amount = floatval($comparison);
+                $function = $qualifier ?? 'day';
+                $unit = $comparison == 1 ? Str::singular($function) : Str::plural($function);
+                $name = "$comparison $unit before";
+            } else {
+                $name = Helpers::asDisplayableName($comparison);
+                $comparison = Str::after($comparison, 'previous-');
+                if ($comparison == 'period') $comparison = 'week';
+                $function = $comparison;
+            }
 
-        if(is_numeric($comparison)){
-            $amount = floatval($comparison);
-            $function = $qualifier?? 'day';
-            $unit = $comparison == 1? Str::singular($function) : Str::plural($function);
-            $name = "$comparison $unit before";
-        }else{
-            $comparison = Str::after($comparison, 'previous-');
-            if($comparison == 'period') $comparison = 'week';
-            $function = $comparison;
-            $name = Helpers::asDisplayableName($comparison);
+            if (!in_array(Str::singular($function), [
+                'hour',
+                'day',
+                'week',
+                'month',
+                'quarter',
+                'year',
+            ])) {
+                throw new InvalidArgumentException('Invalid comparison period provided.');
+            }
+
+            // if($function == 'quarter'){
+            //     Carbon::firstDayOfPreviousQuarter($this->timezone)->setTimezone($this->timezone)->setTime(0, 0);
+            // }
+
+            $function = (string)Str::of($function)->plural()->ucfirst()->prepend('sub');
+
+            // return $now->subDays($range - 1)->setTime(0, 0);
+            // case self::BY_WEEKS:
+            //     return $now->subWeeks($range - 1)->startOfWeek()->setTime(0, 0);
+            // case self::BY_MONTHS:
+            //     return $now->subMonths($range - 1)->firstOfMonth()->setTime(0, 0);
+
+            $period = [
+                (clone $this->period[0])->$function($amount),
+                (clone $this->period[1])->$function($amount),
+            ];
         }
-
-        if(!in_array(Str::singular($function), [
-            'hour',
-            'day',
-            'week',
-            'month',
-            'year',
-        ])){
-            throw new InvalidArgumentException('Invalid comparison period provided.');
-        }
-
-        // if($function == 'quarter'){
-        //     Carbon::firstDayOfPreviousQuarter($this->timezone)->setTimezone($this->timezone)->setTime(0, 0);
-        // }
-
-        $function = (string)Str::of($function)->plural()->ucfirst()->prepend('sub');
-
-        // return $now->subDays($range - 1)->setTime(0, 0);
-        // case self::BY_WEEKS:
-        //     return $now->subWeeks($range - 1)->startOfWeek()->setTime(0, 0);
-        // case self::BY_MONTHS:
-        //     return $now->subMonths($range - 1)->firstOfMonth()->setTime(0, 0);
 
         array_push($this->comparisons, [
             'name' => $name,
-            'period' => [
-                (clone $this->period[0])->$function($amount),
-                (clone $this->period[1])->$function($amount),
-            ],
+            'period' => $period,
         ]);
 
         return $this;
@@ -168,8 +182,7 @@ abstract class PeriodMetric extends Metric
     {
         return [
             $this->period[0],
-            $now?? $this->period[1]?? now($this->timezone)
+            $now ?? $this->period[1] ?? now($this->timezone)
         ];
     }
 }
-

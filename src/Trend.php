@@ -107,7 +107,12 @@ class Trend extends PeriodMetric
      */
     public function count($model, $unit, $column = null)
     {
-        $instance = $model instanceof Builder ? $model->getModel() : new $model;
+        if ($model instanceof Builder) {
+            $instance = $model->getModel();
+            $model = get_class($instance);
+        } else {
+            $instance = new $model;
+        }
         $column = $column ?? $instance->getCreatedAtColumn();
 
         return $this->aggregate($model, $unit, 'count', $instance->getQualifiedKeyName(), $column);
@@ -438,45 +443,46 @@ class Trend extends PeriodMetric
      * @param  string  $function
      * @param  string  $column
      * @param  string  $date_column
-     * @return Chartisan
+     * @return TrendResult
      */
-    protected function aggregate($model, $unit, $function, $column, $date_column = null)
+    public function aggregate($model, $unit, $function, $column, $date_column = null)
     {
-        if(!in_array($unit, [
+        if (!in_array($unit, [
             self::BY_MINUTES,
             self::BY_HOURS,
             self::BY_DAYS,
             self::BY_WEEKS,
             self::BY_MONTHS,
-        ])){
+        ])) {
             throw new InvalidArgumentException('Invalid interval provided.');
         }
 
         $query = $model instanceof Builder ? $model : (new $model)->newQuery();
 
         $expression = TrendDateExpression::make(
-            $query, $date_column = $date_column ?? $query->getModel()->getCreatedAtColumn(),
-            $unit, $this->timezone
+            $query,
+            $date_column = $date_column ?? $query->getModel()->getCreatedAtColumn(),
+            $unit,
+            $this->timezone
         )->get();
 
         $wrapped_column = $query->getQuery()->getGrammar()->wrap($column);
 
         $this->data = $this->queryHeap($query, $expression, $function, $unit, $wrapped_column, $date_column, [
-            new Chronos($this->period[0]->toISOString(), $this->timezone),
-            new Chronos($this->period[1]->toISOString(), $this->timezone),
+            new Chronos((string)$this->period[0], $this->timezone),
+            new Chronos((string)$this->period[1], $this->timezone),
         ]);
 
-        $this->comparisons = array_map(function($comparison) use($query, $expression, $function, $unit, $wrapped_column, $date_column){
+        $this->comparisons = array_map(function ($comparison) use ($query, $expression, $function, $unit, $wrapped_column, $date_column) {
             $results = $this->queryHeap($query, $expression, $function, $unit, $wrapped_column, $date_column, [
-                new Chronos($comparison['period'][0]->toISOString(), $this->timezone),
-                new Chronos($comparison['period'][1]->toISOString(), $this->timezone),
+                new Chronos((string)$comparison['period'][0], $this->timezone),
+                new Chronos((string)$comparison['period'][1], $this->timezone),
             ]);
 
             array_push($this->comparison_values, [
                 'name' => $comparison['name'],
                 'data' => $results,
             ]);
-
         }, $this->comparisons);
 
         $results = [
@@ -485,7 +491,7 @@ class Trend extends PeriodMetric
                 'labels' => array_keys($this->data),
                 'dataset' => array_values($this->data)
             ],
-            'comparisons' => array_map(function($comparison){
+            'comparisons' => array_map(function ($comparison) {
                 return [
                     'name' => $comparison['name'],
                     'labels' => array_keys($comparison['data']),
@@ -505,7 +511,8 @@ class Trend extends PeriodMetric
      * @param  bool  $is_twelve_hour
      * @return array
      */
-    protected function queryHeap(Builder $query, string $expression, string $function, string $unit, string $wrapped_column, string $date_column, array $period){
+    protected function queryHeap(Builder $query, string $expression, string $function, string $unit, string $wrapped_column, string $date_column, array $period)
+    {
         $available_date_results = $this->getAvalaibleDateResults(
             $period[0],
             $period[1],
@@ -515,11 +522,11 @@ class Trend extends PeriodMetric
         );
 
         $results = $query
-                ->select(DB::raw("{$expression} as date_result, {$function}({$wrapped_column}) as aggregate"))
-                ->whereBetween($date_column, $period)
-                ->groupBy(DB::raw($expression))
-                ->orderBy('date_result')
-                ->get();
+            ->select(DB::raw("{$expression} as date_result, {$function}({$wrapped_column}) as aggregate"))
+            ->whereBetween($date_column, $period)
+            ->groupBy(DB::raw($expression))
+            ->orderBy('date_result')
+            ->get();
 
         return array_merge($available_date_results, $results->mapWithKeys(function ($result) use ($unit, $is_twelve_hour) {
             return [
@@ -542,14 +549,14 @@ class Trend extends PeriodMetric
             case self::BY_MINUTES:
                 return with(Chronos::createFromFormat('Y-m-d H:i:00', $result), function ($date) use ($is_twelve_hour) {
                     return $is_twelve_hour
-                            ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:i A')
-                            : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:i');
+                        ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:i A')
+                        : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:i');
                 });
             case self::BY_HOURS:
                 return with(Chronos::createFromFormat('Y-m-d H:00', $result), function ($date) use ($is_twelve_hour) {
                     return $is_twelve_hour
-                            ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:00 A')
-                            : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:00');
+                        ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:00 A')
+                        : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:00');
                 });
             case self::BY_DAYS:
                 return with(Chronos::createFromFormat('Y-m-d', $result), function ($date) {
@@ -573,7 +580,7 @@ class Trend extends PeriodMetric
         [$year, $month] = explode('-', $result);
 
         return with(Chronos::create((int) $year, (int) $month, 1), function ($date) {
-            return __($date->format('F')).' '.$date->format('Y');
+            return __($date->format('F')) . ' ' . $date->format('Y');
         });
     }
 
@@ -594,8 +601,8 @@ class Trend extends PeriodMetric
             Chronos::instance($iso_date)->endOfWeek(),
         ];
 
-        return __($start->format('F')) . ' ' . $start->format('j') . ' - '.
-               __($end->format('F')) . ' ' . $end->format('j');
+        return __($start->format('F')) . ' ' . $start->format('j') . ' - ' .
+            __($end->format('F')) . ' ' . $end->format('j');
     }
 
     /**
@@ -612,7 +619,7 @@ class Trend extends PeriodMetric
     {
         $next_date = $start;
 
-        if (! empty($timezone)) {
+        if (!empty($timezone)) {
             $next_date = $start->setTimezone($timezone);
             $end = $end->setTimezone($timezone);
         }
@@ -633,9 +640,7 @@ class Trend extends PeriodMetric
             }
 
             if ($next_date->lte($end)) {
-                $available_dates[
-                    $this->formatPossibleHeapResultDate($next_date, $unit, $is_twelve_hour)
-                ] = 0;
+                $available_dates[$this->formatPossibleHeapResultDate($next_date, $unit, $is_twelve_hour)] = 0;
             }
         }
 
@@ -655,17 +660,17 @@ class Trend extends PeriodMetric
         switch ($unit) {
             case 'minute':
                 return $is_twelve_hour
-                        ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:i A')
-                        : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:i');
+                    ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:i A')
+                    : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:i');
             case 'hour':
                 return $is_twelve_hour
-                        ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:00 A')
-                        : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:00');
+                    ? __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('g:00 A')
+                    : __($date->format('F')) . ' ' . $date->format('j') . ' - ' . $date->format('G:00');
             case 'day':
                 return __($date->format('F')) . ' ' . $date->format('j') . ', ' . $date->format('Y');
             case 'week':
-                return __($date->startOfWeek()->format('F')) . ' ' . $date->startOfWeek()->format('j') . ' - '.
-                       __($date->endOfWeek()->format('F')) . ' ' . $date->endOfWeek()->format('j');
+                return __($date->startOfWeek()->format('F')) . ' ' . $date->startOfWeek()->format('j') . ' - ' .
+                    __($date->endOfWeek()->format('F')) . ' ' . $date->endOfWeek()->format('j');
             case 'month':
                 return __($date->format('F')) . ' ' . $date->format('Y');
         }
