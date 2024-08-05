@@ -88,7 +88,15 @@ class Partition extends Metric
 
         $wrapped_column = $query->getQuery()->getGrammar()->wrap($column);
 
-        $results = $query->select($group_by, DB::raw("{$function}({$wrapped_column}) as aggregate"))->groupBy($group_by)->get();
+        $select_statement = [$group_by, DB::raw("{$function}({$wrapped_column}) as aggregate")];
+
+        if($query->getConnection()->getDriverName() === 'hogql'){
+            $query = $query->addSelect(...$select_statement);
+        }else{
+            $query = $query->select(...$select_statement);
+        }
+
+        $results = $query->groupBy($group_by)->get();
 
         $results = $results->mapWithKeys(function ($result) use ($group_by) {
             return $this->formatResult($result, $group_by);

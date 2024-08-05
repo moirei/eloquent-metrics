@@ -108,14 +108,18 @@ class Trend extends PeriodMetric
     public function count($model, $unit, $column = null)
     {
         if ($model instanceof Builder) {
+            /** @var \Illuminate\Database\Eloquent\Model */
             $instance = $model->getModel();
-            $model = get_class($instance);
+            $query = $model->getConnection()->getDriverName() === 'hogql'? $model : get_class($instance);
         } else {
+            /** @var \Illuminate\Database\Eloquent\Model */
             $instance = new $model;
+            $query = $model;
         }
+
         $column = $column ?? $instance->getCreatedAtColumn();
 
-        return $this->aggregate($model, $unit, 'count', $instance->getQualifiedKeyName(), $column);
+        return $this->aggregate($query, $unit, 'count', $instance->getQualifiedKeyName(), $column);
     }
 
     /**
@@ -521,8 +525,15 @@ class Trend extends PeriodMetric
             $is_twelve_hour = $this->twelve_hour
         );
 
+        $select_statement = DB::raw("{$expression} as date_result, {$function}({$wrapped_column}) as aggregate");
+
+        if($query->getConnection()->getDriverName() === 'hogql'){
+            $query = $query->addSelect($select_statement);
+        }else{
+            $query = $query->select($select_statement);
+        }
+
         $results = $query
-            ->select(DB::raw("{$expression} as date_result, {$function}({$wrapped_column}) as aggregate"))
             ->whereBetween($date_column, $period)
             ->groupBy(DB::raw($expression))
             ->orderBy('date_result')
