@@ -2,10 +2,7 @@
 
 All documentation is available at [the documentation site](https://moirei.github.io/eloquent-metrics).
 
-
-
 Example
-
 
 ```php
 ...
@@ -18,7 +15,18 @@ $metrics = Trend::make()
             ->sumByDays(\App\Models\Order::class, 'total');
 ```
 
+Example with [moirei/hogql](https://github.com/moirei/hogql)
 
+```php
+...
+$query = HogQl::eloquent()->where('event', '$pageview');
+
+$metrics = Trend::make()
+            ->name('Page views')
+            ->period('week')
+            ->add('previous-period')
+            ->sumByDays($query);
+```
 
 ## Installation
 
@@ -26,19 +34,13 @@ $metrics = Trend::make()
 composer require moirei/eloquent-metrics
 ```
 
-
-
 ## Changelog
 
 Please see [CHANGELOG](./CHANGELOG.md).
 
-
-
 ## Credits
 
 - [Augustus Okoye](https://github.com/augustusnaz)
-
-
 
 ## License
 

@@ -64,6 +64,7 @@ class TrendDateExpression
             'mariadb',
             'pgsql',
             'sqlsrv',
+            'hogql',
         ])){
             throw new InvalidArgumentException('Unsupported database.');
         }
@@ -127,6 +128,7 @@ class TrendDateExpression
         if($this->driver === 'mysql') return $this->getMysql();
         if($this->driver === 'pgsql') return $this->getPgsql();
         if($this->driver === 'sqlsrv') return $this->getSqlsrv();
+        if($this->driver === 'hogql') return $this->getHogql();
     }
 
     /**
@@ -226,7 +228,6 @@ class TrendDateExpression
         }
     }
 
-
     /**
      * Get the Sqlsrv value of the expression.
      *
@@ -260,6 +261,37 @@ class TrendDateExpression
                 return "FORMAT({$date}, 'yyyy-MM-dd HH:00')";
             case 'minute':
                 return "FORMAT({$date}, 'yyyy-MM-dd HH:mm:00')";
+        }
+    }
+
+    /**
+     * Get the Sqlsrv value of the expression.
+     *
+     * @return mixed
+     */
+    public function getHogql()
+    {
+        $offset = $this->offset();
+
+        if ($offset > 0) {
+            $interval = '+ INTERVAL '.$offset.' HOUR';
+        } elseif ($offset === 0) {
+            $interval = '';
+        } else {
+            $interval = '- INTERVAL '.($offset * -1).' HOUR';
+        }
+
+        switch ($this->unit) {
+            case 'month':
+                return "formatDateTime({$this->wrap($this->column)} {$interval}, '%Y-%m')";
+            case 'week':
+                return "formatDateTime({$this->wrap($this->column)} {$interval}, '%Y-%u')";
+            case 'day':
+                return "formatDateTime({$this->wrap($this->column)} {$interval}, '%Y-%m-%d')";
+            case 'hour':
+                return "formatDateTime({$this->wrap($this->column)} {$interval}, '%Y-%m-%d %H:00')";
+            case 'minute':
+                return "formatDateTime({$this->wrap($this->column)} {$interval}, '%Y-%m-%d %H:%i:00')";
         }
     }
 }
